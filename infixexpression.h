@@ -7,12 +7,11 @@
 #include <QStack>
 #include <QMap>
 #define IEstring QString
-#define IElist QList<ExpressionUnit>
-#define IEstack QStack<ExpressionUnit>
-#define IEnumstack QStack<double>
-#define IEmap QMap<IEstring, double>
+#define IElist QList
+#define IEstack QStack
+#define IEmap QMap
 #define IEGetChar(iter) ((iter)->toLatin1())
-#define IEAppendNum(str, num) (str).append(QString::number(num))
+#define IEToString(num) QString::number(num)
 #define IEMapFind(map, key) ((map).value(key))
 #else
 #include <string>
@@ -20,12 +19,11 @@
 #include <stack>
 #include <map>
 #define IEstring std::string
-#define IElist std::list<ExpressionUnit>
-#define IEstack std::stack<ExpressionUnit>
-#define IEnumstack std::stack<double>
-#define IEmap std::map<IEstring, double>
+#define IElist std::list
+#define IEstack std::stack
+#define IEmap std::map
 #define IEGetChar(iter) (*(iter))
-#define IEAppendNum(str, num) (str).append(std::to_string(num))
+#define IEToString(num) std::to_string(num)
 #define IEMapFind(map, key) ((map).find(key)->second)
 #endif
 
@@ -33,47 +31,43 @@
 class InfixExpression
 {
 public:
-    InfixExpression(const IEstring &expression);
+    InfixExpression(const IEstring &expression, IEstring *error = nullptr);
+    ~InfixExpression();
 
-    void set(const IEstring &expression);
+    bool set(const IEstring &expression, IEstring *error = nullptr);
     const IEstring &get();
     IEstring getPostfix();
-    double calc(const IEmap &parameters = IEmap());
+    double calc(const IEmap<IEstring, double> &parameters = IEmap<IEstring, double>());
 
 protected:
-    class ExpressionUnit
+    class ExpressionElement
     {
     public:
-        enum : uint8_t { Number, Variable, Operator } type;
-        double num;
-        IEstring var;
-        enum : uint8_t {
-            L_BRACKET, R_BRACKET, COMMA,
-            ADD, SUB, MULT, DIV, MOD, POWER,
-            EQUALS, NOT_EQUALS, GREATER, LESS, GREATER_EQUALS, LESS_EQUALS,
-            NOT, OR, AND,
-            TERNARY, TERNARY2,
-            SIN, COS, TAN,
-            MAX, MIN, ABS,
-            FLOOR, ROUND, CEIL
-        } oper;
+        enum : uint8_t { Number, Variable, Unary, Binary, Ternary, Function, Bracket } type;
+        enum : uint8_t { NAG, NOT } unary;
+        enum : uint8_t { ADD, SUB, MULT, DIV, MOD, ET, NET, GT, GET, LT, LET, AND, OR } binary;
+        enum : uint8_t { QUESTION, COLON } ternary;
+        enum : uint8_t { SIN, COS, TAN, ASIN, ACOS, ATAN, MAX, MIN, ABS, POW, LOG, FLOOR, ROUND, CEIL } function;
+        enum : uint8_t { LEFT, RIGHT, COMMA } bracket;
+        double number;
+        IEstring variable;
 
     public:
-        ExpressionUnit();
-        ExpressionUnit(double num);
-        ExpressionUnit(IEstring str);
-        ExpressionUnit(typeof (oper) oper);
+        ExpressionElement() { };
+        ExpressionElement(double number) { type = Number; this->number = number; }
+        ExpressionElement(IEstring variable) { type = Variable; this->variable = variable; }
+        ExpressionElement(typeof (unary) unary) { type = Unary; this->unary = unary; }
+        ExpressionElement(typeof (binary) binary) { type = Binary; this->binary = binary; }
+        ExpressionElement(typeof (ternary) ternary) { type = Ternary; this->ternary = ternary; }
+        ExpressionElement(typeof (function) function) { type = Function; this->function = function; }
+        ExpressionElement(typeof (bracket) bracket) { type = Bracket; this->bracket = bracket; }
 
-        int getPriority();
-        void calculate(IEnumstack &stack) const;
+        int priority() const;
     };
 
 protected:
-    ExpressionUnit getExpressionUnit(IEstring::const_iterator &iter);
-
-protected:
     IEstring expression;
-    IElist postfix;
+    IElist<ExpressionElement> *postfix;
 };
 
 #endif // INFIXEXPRESSION_H
